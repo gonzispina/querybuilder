@@ -4,17 +4,6 @@ import (
 	"strings"
 )
 
-type CommonColumn string
-
-const (
-	Count    CommonColumn = "COUNT(*)"
-	Wildcard CommonColumn = "*"
-)
-
-func (c CommonColumn) Name() string {
-	return string(c)
-}
-
 // Fields a list of fields
 type Fields []Field
 
@@ -27,24 +16,8 @@ func (f Fields) Format() string {
 	return strings.Join(fields, ", ")
 }
 
-// Fields a list of fields
-type Columns []Column
-
-// Format all the columns to get queried
-func (c Columns) Format() string {
-	cols := []string{}
-	for _, col := range c {
-		cols = append(cols, col.Name())
-	}
-	return strings.Join(cols, ", ")
-}
-
 // Field are the possible fields to create filters
 type Field interface {
-	Name() string
+	Column
 	Type() Type
-}
-
-type Column interface {
-	Name() string
 }
