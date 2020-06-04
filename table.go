@@ -4,7 +4,6 @@ import "strings"
 
 type Table struct {
 	name    string
-	columns Columns
 	as      string
 }
 

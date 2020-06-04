@@ -9,7 +9,7 @@ const (
 
 type order struct {
 	t      orderType
-	column Column
+	column Field
 	father *sel
 }
 

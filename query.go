@@ -31,9 +31,10 @@ type delete struct {
 	filters Filters
 }
 
-func Select(columns ...Column) *sel {
+// Select initiates a new select query
+func Select(fields ...Field) *sel {
 	s := &sel{}
-	s.table.columns = columns
+	s.fields = fields
 	return s
 }
 

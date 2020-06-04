@@ -8,19 +8,19 @@ import (
 )
 
 func TestSelectQuery(test *testing.T) {
-	test.Run("TestSelectQuery - Select with columns", func(t *testing.T) {
+	test.Run("Select with columns", func(t *testing.T) {
 		query, _ := querybuilder.Select(dueDate, userID).From("results").Done()
 		expected := "SELECT due_date, user_id FROM results;"
 		assert.Equal(t, expected, query)
 	})
 
-	test.Run("TestSelectQuery - Select without columns", func(t *testing.T) {
+	test.Run("Select without columns", func(t *testing.T) {
 		query, _ := querybuilder.Select().From("results").Done()
 		expected := "SELECT * FROM results;"
 		assert.Equal(t, expected, query)
 	})
 
-	test.Run("TestSelectQuery - Select with columns and orde asc", func(t *testing.T) {
+	test.Run("Select with columns and order asc", func(t *testing.T) {
 		query, _ := querybuilder.Select().
 			From("results").
 			OrderBy(dueDate).Asc().
@@ -30,7 +30,7 @@ func TestSelectQuery(test *testing.T) {
 		assert.Equal(t, expected, query)
 	})
 
-	test.Run("TestSelectQuery - Select with columns and orde desc", func(t *testing.T) {
+	test.Run("Select with columns and order desc", func(t *testing.T) {
 		query, _ := querybuilder.Select().
 			From("results").
 			OrderBy(dueDate).Desc().
@@ -40,7 +40,7 @@ func TestSelectQuery(test *testing.T) {
 		assert.Equal(t, expected, query)
 	})
 
-	test.Run("TestSelectQuery - Select without columns and no filters and with limit and offset", func(t *testing.T) {
+	test.Run("Select without columns and no filters and with limit and offset", func(t *testing.T) {
 		query, _ := querybuilder.Select().
 			From("results").
 			Limit(2).

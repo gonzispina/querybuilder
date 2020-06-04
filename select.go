@@ -2,6 +2,7 @@ package querybuilder
 
 type sel struct {
 	baseQuery
+	fields Fields
 	joins  joins
 	filter *Filters
 	order  *order
@@ -18,12 +19,11 @@ func (s *sel) As(as string) *sel {
 	return s
 }
 
-func (s sel) LeftJoin(table string) *joinTable {
+func (s *sel) LeftJoin(table string) *joinTable {
 	j := &join{t: left}
 	j.table = &joinTable{
 		Table: &Table{
 			name:    table,
-			columns: nil,
 			as:      "",
 		},
 		father: j,
@@ -33,12 +33,11 @@ func (s sel) LeftJoin(table string) *joinTable {
 	return j.table
 }
 
-func (s sel) RightJoin(table string) *joinTable {
+func (s *sel) RightJoin(table string) *joinTable {
 	j := &join{t: right}
 	j.table = &joinTable{
 		Table: &Table{
 			name:    table,
-			columns: nil,
 			as:      "",
 		},
 		father: j,
@@ -57,7 +56,7 @@ func (s *sel) Where(filters Filters) *sel {
 	return s
 }
 
-func (s *sel) OrderBy(column Column) *order {
+func (s *sel) OrderBy(column Field) *order {
 	s.order = &order{
 		column: column,
 		father: s,
@@ -89,11 +88,11 @@ func (s *sel) Done() (string, interface{}) {
 		return "", nil
 	}
 
-	if len(s.table.columns) == 0 {
-		s.table.columns = Columns{Wildcard}
+	if len(s.fields) == 0 {
+		s.fields = Fields{wildcard}
 	}
 
-	query := "SELECT " + s.table.columns.Format()
+	query := "SELECT " + s.fields.Format()
 	query += " FROM " + s.table.format()
 
 	if s.joins != nil && len(s.joins) > 0 {
