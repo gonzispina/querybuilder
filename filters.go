@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+type formatterFunc func(fieldType Type, values ...string) string
+
 // Filter is a query filter
 type filter struct {
 	logic      logic
@@ -44,79 +46,18 @@ func (f Filters) Format() string {
 	return trimmed
 }
 
-func (f Filters) canAddOperation() bool {
-	lastIndex := len(f) - 1
-	return lastIndex >= 0
-}
-
-// And adds an and condition
-func (f Filters) And(field Field) Filters {
+func (f Filters) addLogical(operator logic, field Field) Filters {
 	if !f.canAddOperation() {
 		return f
 	}
 
 	return append(f, filter{
-		logic: and,
+		logic: operator,
 		field: field,
 	})
 }
 
-// Or adds an or condition
-func (f Filters) Or(field Field) Filters {
-	if !f.canAddOperation() {
-		return f
-	}
-
-	return append(f, filter{
-		logic: or,
-		field: field,
-	})
-}
-
-// Equals adds an equality condition
-func (f Filters) EqualTo(value string) Filters {
-	if !f.canAddOperation() {
-		return f
-	}
-
-	lastIndex := len(f) - 1
-	lastFilter := f[lastIndex]
-	lastFilter.relational = equal
-	lastFilter.value = lastFilter.field.Type().format(value)
-
-	return append(f[:lastIndex], lastFilter)
-}
-
-// Greater adds a greater condition
-func (f Filters) GreaterThan(value string) Filters {
-	if !f.canAddOperation() {
-		return f
-	}
-
-	lastIndex := len(f) - 1
-	lastFilter := f[lastIndex]
-	lastFilter.relational = greater
-	lastFilter.value = lastFilter.field.Type().format(value)
-
-	return append(f[:lastIndex], lastFilter)
-}
-
-// Lesser adds a lesser condition
-func (f Filters) LesserThan(value string) Filters {
-	if !f.canAddOperation() {
-		return f
-	}
-
-	lastIndex := len(f) - 1
-	lastFilter := f[lastIndex]
-	lastFilter.relational = lesser
-	lastFilter.value = lastFilter.field.Type().format(value)
-
-	return append(f[:lastIndex], lastFilter)
-}
-
-// In adds multiple values to equality
-func (f Filters) In(values ...string) Filters {
+func (f Filters) addRelational(operator relational, formatter formatterFunc, values ...string) Filters {
 	if !f.canAddOperation() {
 		return f
 	}
@@ -127,30 +68,103 @@ func (f Filters) In(values ...string) Filters {
 
 	lastIndex := len(f) - 1
 	lastFilter := f[lastIndex]
-	lastFilter.relational = in
-
-	var formatted []string
-	for _, value := range values {
-		formatted = append(formatted, lastFilter.field.Type().format(value))
-	}
-
-	lastFilter.value = "(" + strings.Join(formatted, ", ") + ")"
+	lastFilter.relational = operator
+	lastFilter.value = formatter(lastFilter.field.Type(), values...)
 
 	return append(f[:lastIndex], lastFilter)
 }
+
+func (f Filters) canAddOperation() bool {
+	lastIndex := len(f) - 1
+	return lastIndex >= 0
+}
+
+// And adds an and condition
+func (f Filters) And(field Field) Filters {
+	return f.addLogical(and, field)
+}
+
+// Or adds an or condition
+func (f Filters) Or(field Field) Filters {
+	return f.addLogical(or, field)
+}
+
+// Equals adds an equality condition
+func (f Filters) EqualTo(value string) Filters {
+	return f.addRelational(equal, func(fieldType Type, values ...string) string {
+		return fieldType.format(values[0])
+	}, value)
+}
+
+// NotEqualTo adds an inequality condition
+func (f Filters) NotEqualTo(value string) Filters {
+	return f.addRelational(notEqual, func(fieldType Type, values ...string) string {
+		return fieldType.format(values[0])
+	}, value)
+}
+
+// Greater adds a greater condition
+func (f Filters) GreaterThan(value string) Filters {
+	return f.addRelational(greater, func(fieldType Type, values ...string) string {
+		return fieldType.format(values[0])
+	}, value)
+}
+
+// GreaterEqualThan adds a greater or equal condition
+func (f Filters) GreaterEqualThan(value string) Filters {
+	return f.addRelational(greaterEqual, func(fieldType Type, values ...string) string {
+		return fieldType.format(values[0])
+	}, value)
+}
+
+// Lesser adds a lesser condition
+func (f Filters) LesserThan(value string) Filters {
+	return f.addRelational(lesser, func(fieldType Type, values ...string) string {
+		return fieldType.format(values[0])
+	}, value)
+}
+
+// LesserEqualThan adds a lesser or equal condition
+func (f Filters) LesserEqualThan(value string) Filters {
+	return f.addRelational(lesserEqual, func(fieldType Type, values ...string) string {
+		return fieldType.format(values[0])
+	}, value)
+}
+
 
 // In adds multiple values to equality
-func (f Filters) Between(first string, second string) Filters {
-	if !f.canAddOperation() {
-		return f
-	}
+func (f Filters) In(values ...string) Filters {
+	return f.addRelational(in, func(fieldType Type, v ...string) string {
+		var formatted []string
+		for _, value := range v {
+			formatted = append(formatted, fieldType.format(value))
+		}
 
-	lastIndex := len(f) - 1
-	lastFilter := f[lastIndex]
-	lastFilter.relational = between
-	firstFormatted := lastFilter.field.Type().format(first)
-	secondFormatted := lastFilter.field.Type().format(second)
-	lastFilter.value = "(" + firstFormatted + " AND " + secondFormatted + ")"
-
-	return append(f[:lastIndex], lastFilter)
+		return "(" + strings.Join(formatted, ", ") + ")"
+	}, values...)
 }
+
+// Between adds a between twe values condition
+func (f Filters) Between(first string, second string) Filters {
+	return f.addRelational(between, func(fieldType Type, values ...string) string {
+		firstFormatted := fieldType.format(values[0])
+		secondFormatted := fieldType.format(values[1])
+		return "(" + firstFormatted + " AND " + secondFormatted + ")"
+	}, first, second)
+}
+
+// IsNull adds a null equality condition
+func (f Filters) IsNull() Filters {
+	return f.addRelational(isNull, func(fieldType Type, values ...string) string {
+		return "NULL"
+	}, "")
+}
+
+// IsNotNull adds a null inequality condition
+func (f Filters) IsNotNull() Filters {
+	return f.addRelational(isNotNull, func(fieldType Type, values ...string) string {
+		return "NULL"
+	}, "")
+}
+
+
