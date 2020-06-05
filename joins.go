@@ -36,7 +36,7 @@ func (j *join) format() string {
 		str += " " + j.table.as
 	}
 
-	str += " ON (" + j.filters.Format() + ")"
+	str += " ON (" +  ")"
 	return str
 }
 
