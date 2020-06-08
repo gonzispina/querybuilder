@@ -16,42 +16,24 @@ const (
 	or logicalType = "OR"
 )
 
-func(t logicalType) newLogical(field Field) logical {
-	base := &baseLogical{
-		logic: t,
-		field: field,
-	}
-
-	logics := map[logicalType]logical{
-		and: base,
-		or:  base,
-		none: &noneLogical{base},
+func(t logicalType) format(value string) string {
+	methods := map[logicalType]func (t logicalType, value string) string{
+		and: baseFormatter,
+		or:  baseFormatter,
+		none: noneFormatter,
 
 	}
 
-	logical, _ := logics[t]
-	return logical
+	formatter, _ := methods[t]
+	return formatter(t, value)
 }
 
-type logical interface {
-	format() string
+func baseFormatter(t logicalType, value string) string {
+	return fmt.Sprintf("%s %s", t, value)
 }
 
-type baseLogical struct {
-	logic logicalType
-	field Field
-}
-
-func (b *baseLogical) format() string {
-	return fmt.Sprintf("%s %s", b.logic, b.field.Name())
-}
-
-type noneLogical struct {
-	*baseLogical
-}
-
-func (n *noneLogical) format() string {
-	return n.field.Name()
+func noneFormatter(t logicalType, value string) string {
+	return value
 }
 
 type relationalType string
@@ -79,10 +61,11 @@ const (
 	isNotNull = "IS NOT"
 )
 
-func(t relationalType) newRelational(values ...interface{}) relational {
+func(t relationalType) newRelational(fieldType Type, values ...interface{}) relational {
 	base := &baseRelational{
 		relation: t,
 		values:   values,
+		fieldType: fieldType,
 	}
 
 	relations := map[relationalType]relational{
@@ -109,6 +92,7 @@ type relational interface {
 type baseRelational struct {
 	relation relationalType
 	values   []interface{}
+	fieldType Type
 }
 
 func (b *baseRelational) format(starter int) (string, []interface{}) {
@@ -116,7 +100,8 @@ func (b *baseRelational) format(starter int) (string, []interface{}) {
 		return "", b.values
 	}
 
-	return fmt.Sprintf("%s $%v", b.relation, starter), b.values
+	dollarValue := fmt.Sprintf("$%v", starter)
+	return fmt.Sprintf("%s %s", b.relation, b.fieldType.format(dollarValue)), b.values
 }
 
 type inRelational struct {
@@ -130,7 +115,8 @@ func (i *inRelational) format(starter int) (string, []interface{}) {
 
 	formatted := make([]string, len(i.values))
 	for index, _ := range i.values {
-		 formatted[index] = fmt.Sprintf("$%v", starter + index )
+		dollarValue := fmt.Sprintf("$%v", starter + index )
+		formatted[index] = i.fieldType.format(dollarValue)
 	}
 
 	return "IN (" + strings.Join(formatted, ", ") + ")", i.values
@@ -144,7 +130,10 @@ func (b *betweenRelational) format(starter int) (string, []interface{}) {
 	if len(b.values) < 2 {
 		return "", b.values
 	}
-	return fmt.Sprintf("BETWEEN ($%v AND $%v", starter, starter + 1), b.values
+
+	first := b.fieldType.format(fmt.Sprintf("$%v", starter))
+	second := b.fieldType.format(fmt.Sprintf("$%v", starter + 1))
+	return fmt.Sprintf("BETWEEN (%s AND %s)", first, second), b.values
 }
 
 type isNullRelational struct {

@@ -17,7 +17,6 @@ const (
 
 func (f Type) format(value string) string {
 	formatters := map[Type]formatter{
-		String: stringFormat,
 		Date:   dateFormat,
 	}
 
@@ -31,5 +30,4 @@ func (f Type) format(value string) string {
 
 type formatter func(value string) string
 
-func stringFormat(value string) string { return fmt.Sprintf("'%s'", value) }
-func dateFormat(value string) string   { return fmt.Sprintf("to_timestamp('%s')", value) }
+func dateFormat(value string) string   { return fmt.Sprintf("to_timestamp(%s)", value) }

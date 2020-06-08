@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gonzispina/querybuilder"
+
 	"github.com/stretchr/testify/assert"
 )
 
